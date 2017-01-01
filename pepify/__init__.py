@@ -1,4 +1,3 @@
-from .adapters import camelize, underscore
-from .proxy import PepifyProxy
+from .proxy import make_proxy
 
 __all__ = ['PepifyProxy']

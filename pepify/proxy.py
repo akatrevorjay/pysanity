@@ -1,22 +1,29 @@
 import inspect
+import operator
 import weakref
 import wrapt
 from .util import _sentinel, lazyproperty
-from .adapters import camelize
+from . import adapters
 
 
 class Adapter(object):
 
-    def __init__(self, read):
-        self.read = read
+    def __init__(self, get, predicate=None):
+        self.get = get
+        self.predicate = predicate
 
-    def get_attr(self, name, wrapped):
-        for adapted_name in self.read(name):
+    def find_attr(self, name, wrapped, predicate=None):
+        if not predicate:
+            predicate = self.predicate
+
+        for adapted_name in self.get(name):
             try:
-                return getattr(wrapped, adapted_name)
+                obj = getattr(wrapped, adapted_name)
             except AttributeError:
-                # sugar
                 continue
+            if not predicate or predicate(name, adapted_name, obj):
+                return obj
+
         raise AttributeError(name)
 
 
@@ -26,22 +33,28 @@ class CachedAdapter(Adapter):
     def cache(self):
         return weakref.WeakValueDictionary()
 
-    def get_attr(self, name, wrapped):
+    def find_attr(self, name, wrapped, predicate=None):
         try:
             return self.cache[name]
         except KeyError:
-            # pass here to not chain exceptions
-            pass
-        val = super(CachedAdapter, self).get_attr(name, wrapped)
-        self.cache[name] = val
-        return val
+            val = super(CachedAdapter, self).find_attr(name, wrapped, predicate)
+
+            self.cache[name] = val
+            return val
 
 
 class PepifyProxy(wrapt.ObjectProxy):
-
     def __init__(self, wrapped, adapter):
         super(PepifyProxy, self).__init__(wrapped)
         self._self_adapter = adapter
+
+    @property
+    def __get__(self):
+        return self.__wrapped__.__get__
+
+    @property
+    def __call__(self):
+        return self.__wrapped__.__call__
 
     def __getattr__(self, name):
         try:
@@ -49,7 +62,7 @@ class PepifyProxy(wrapt.ObjectProxy):
         except AttributeError:
             # pass here to not chain exceptions
             pass
-        return self._self_adapter.get_attr(name, wrapped=self.__wrapped__)
+        return self._self_adapter.find_attr(name, wrapped=self.__wrapped__)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__, repr(self.__wrapped__))
@@ -71,9 +84,13 @@ class RecursivePepifyProxy(PepifyProxy):
         return val
 
 
-def proxy(wrapped, read=camelize, cache=True, recurse=True):
+def obj_is_function_or_method(name, adapted_name, obj):
+    return inspect.isfunction(obj) or inspect.ismethod(obj)
+
+
+def make_proxy(wrapped, get=adapters.lower_camel_case, predicate=obj_is_function_or_method, cache=True, recurse=True):
     adapter_factory = cache and CachedAdapter or Adapter
     proxy_factory = recurse and RecursivePepifyProxy or PepifyProxy
 
-    adapter = adapter_factory(read=read)
+    adapter = adapter_factory(get=get, predicate=predicate)
     return proxy_factory(wrapped, adapter)

@@ -1,11 +1,11 @@
 import re
 
 
-def underscore(word):
-    word = re.sub(r"([A-Z]+)([A-Z][a-z])", r'\1_\2', word)
-    word = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', word)
-    word = word.replace("-", "_")
-    yield word.lower()
+def underscore(string):
+    string = re.sub(r"([A-Z]+)([A-Z][a-z])", r'\1_\2', string)
+    string = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', string)
+    string = string.replace("-", "_")
+    yield string.lower()
 
 
 def camelize(string, uppercase_first_letter=True):

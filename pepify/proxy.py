@@ -1,7 +1,7 @@
 import wrapt
 
-from .adapters import camelize
 from .adaptation import CachingAdaptation
+from .adapters import camelize
 
 
 class PepifyProxy(wrapt.ObjectProxy):

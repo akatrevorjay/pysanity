@@ -54,19 +54,14 @@ class CachingAdaptation(Adaptation):
     def cache(self):
         return weakref.WeakValueDictionary()
 
-    @wrapt.decorator
-    def _cache_method(fn, instance, args, kwargs):
-        name = args[0]
+    def get_attr(self, name, wrapped):
+        if name in self.cache:
+            return self.cache[name]
 
-        if name in instance.cache:
-            return instance.cache[name]
+        val = super(CachingAdaptation, self).get_attr(name, wrapped)
 
-        val = fn(*args, **kwargs)
-
-        instance.cache[name] = val
+        self.cache[name] = val
         return val
-
-    get_attr = _cache_method(Adaptation.get_attr)
 
 
 class PepifyProxy(wrapt.ObjectProxy):

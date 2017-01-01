@@ -42,8 +42,10 @@ class Adaptation(object):
 
     def get_attr(self, name, wrapped):
         for adapted_name in self.read(name):
-            if hasattr(wrapped, adapted_name):
+            try:
                 return getattr(wrapped, adapted_name)
+            except AttributeError:
+                continue
 
         raise AttributeError(name)
 
@@ -55,13 +57,12 @@ class CachingAdaptation(Adaptation):
         return weakref.WeakValueDictionary()
 
     def get_attr(self, name, wrapped):
-        if name in self.cache:
+        try:
             return self.cache[name]
-
-        val = super(CachingAdaptation, self).get_attr(name, wrapped)
-
-        self.cache[name] = val
-        return val
+        except KeyError:
+            val = super(CachingAdaptation, self).get_attr(name, wrapped)
+            self.cache[name] = val
+            return val
 
 
 class PepifyProxy(wrapt.ObjectProxy):
@@ -71,7 +72,7 @@ class PepifyProxy(wrapt.ObjectProxy):
         self.__adapt = adapt
 
     def __getattr__(self, name):
-        if hasattr(self.__wrapped__, name):
+        try:
             return super(PepifyProxy, self).__getattr__(name)
-
-        return self.__adapt.get_attr(name, wrapped=self.__wrapped__)
+        except AttributeError:
+            return self.__adapt.get_attr(name, wrapped=self.__wrapped__)

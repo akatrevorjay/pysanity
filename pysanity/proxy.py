@@ -45,10 +45,12 @@ class CachedAdapter(Adapter):
         try:
             return self.cache[name]
         except KeyError:
-            obj = super(CachedAdapter, self).find_attr(name, wrapped)
+            # pass here to not chain exceptions in stack
+            pass
+        obj = super(CachedAdapter, self).find_attr(name, wrapped)
 
-            self.cache[name] = obj
-            return obj
+        self.cache[name] = obj
+        return obj
 
 
 class PepifyProxy(wrapt.ObjectProxy):
@@ -69,7 +71,7 @@ class PepifyProxy(wrapt.ObjectProxy):
         try:
             return super(PepifyProxy, self).__getattr__(name)
         except AttributeError:
-            # pass here to not chain exceptions
+            # pass here to not chain exceptions in stack
             pass
         return self._self_adapter.find_attr(name, wrapped=self.__wrapped__)
 

@@ -30,7 +30,8 @@ All the while keeping your precious code completion working as expected thanks t
 
 You're welcome for my existence on PyPi.
 
-### Logging you say?
+Logging you say?
+----------------
 
 *Hint:* Try this out and stop accepting needless boilerplate in your code, stdlib or not:
 
